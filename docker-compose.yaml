@@ -1,0 +1,34 @@
+services:
+  web:
+    build: .
+    deploy:
+      resources:
+        limits:
+          cpus: '2.0'
+          memory: 2G
+    ports:
+      - "3000:3000"
+    depends_on:
+      - db
+    stdin_open: true
+    tty: true
+  
+  db:
+    image: postgres
+    shm_size: 700mb
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      TZ: Europe/Kyiv
+    command: >
+      bash -c "ln -sf /usr/share/zoneinfo/Europe/Kyiv /usr/share/zoneinfo/Europe/Kiev &&
+               exec docker-entrypoint.sh postgres"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql
+
+
+volumes:
+  postgres_data:

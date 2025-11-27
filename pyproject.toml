@@ -1,0 +1,31 @@
+[project]
+name = "goit-pythonweb-hw-10"
+version = "0.1.0"
+description = ""
+authors = [
+    {name = "Anastasiia-Bondarchuk",email = "125996065+AnastasiaBndr@users.noreply.github.com"}
+]
+readme = "README.md"
+requires-python = ">=3.12 <4.0"
+dependencies = [
+    "fastapi[standard] (>=0.121.1,<0.122.0)",
+    "alembic (>=1.17.1,<2.0.0)",
+    "sqlalchemy (>=2.0.44,<3.0.0)",
+    "psycopg2-binary (>=2.9.11,<3.0.0)",
+    "psycopg[binary] (>=3.2.12,<4.0.0)",
+    "pydantic (>=2.12.4,<3.0.0)",
+    "asyncpg (>=0.30.0,<0.31.0)",
+    "python-jose[cryptography] (>=3.5.0,<4.0.0)",
+    "passlib[argon2] (>=1.7.4,<2.0.0)",
+    "python-dotenv (>=1.2.1,<2.0.0)",
+    "libgravatar (>=1.0.4,<2.0.0)",
+    "pydantic-settings (>=2.12.0,<3.0.0)",
+    "slowapi (>=0.1.9,<0.2.0)",
+    "fastapi-mail (>=1.5.8,<2.0.0)",
+    "cloudinary (>=1.44.1,<2.0.0)",
+]
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"

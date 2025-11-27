@@ -1,0 +1,32 @@
+from sqlalchemy.ext.asyncio import AsyncSession
+
+from src.repository.contacts import ContactRepository
+from src.schemas import ContactModel
+from src.database.models import User
+
+
+class ContactService:
+
+    def __init__(self, db: AsyncSession) -> None:
+        self.repository = ContactRepository(db)
+
+    async def get_contacts(self, skip: int, limit: int,user:User):
+        return await self.repository.get_contacts(skip, limit,user)
+
+    async def get_contact(self, contact_id: int, user: User):
+        return await self.repository.get_contact_by_id(contact_id,user)
+
+    async def create_contact(self, body: ContactModel,user:User):
+        return await self.repository.create_contact(body,user)
+
+    async def update_contact(self, contact_id: int, body: ContactModel, user: User):
+        return await self.repository.update_contact(contact_id, body,user)
+
+    async def delete_contact(self, contact_id, user: User):
+        return await self.repository.remove_contact(contact_id,user)
+
+    async def search_contact(self, first_name: str = None, second_name: str = None, email: str = None, user:User=None):
+        return await self.repository.search_contacts(first_name, second_name, email,user)
+
+    async def get_upcoming_birthdays(self, user: User):
+        return await self.repository.get_upcoming_birthdays(user)
