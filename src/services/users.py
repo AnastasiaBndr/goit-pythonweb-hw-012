@@ -24,7 +24,7 @@ class UserService:
             return None
 
         hashed = hash_handler.get_password_hash(body.password)
-        return await self.repo.create_user(body, hashed,avatar)
+        return await self.repo.create_user(body, hashed, avatar)
 
     async def get_user_by_id(self, user_id: int):
         return await self.repo.get_user_by_id(user_id)
@@ -37,7 +37,10 @@ class UserService:
 
     async def confirmed_email(self, email: str):
         return await self.repo.confirmed_email(email)
-    
+
+    async def reset_password(self, email: str,password:str):
+        hashed = hash_handler.get_password_hash(password)
+        return await self.repo.reset_password(email,hashed)
+
     async def update_avatar_url(self, email: str, url: str):
         return await self.repo.update_avatar_url(email, url)
-

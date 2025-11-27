@@ -10,9 +10,17 @@ services:
       - "3000:3000"
     depends_on:
       - db
+      - redis
     stdin_open: true
     tty: true
-  
+
+  redis:
+    image: redis:latest
+    command: redis-server --requirepass ${REDIS_PASSWORD}
+    ports: 
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
   db:
     image: postgres
     shm_size: 700mb
@@ -32,3 +40,4 @@ services:
 
 volumes:
   postgres_data:
+  redis_data:

@@ -4,11 +4,12 @@ from pydantic import (
     EmailStr,
     model_validator,
     field_validator,
-    ConfigDict,
+    ConfigDict
 )
 from fastapi import HTTPException, status
 from typing import Optional
 from datetime import date, datetime
+from src.database.models import UserRole
 
 
 class ContactBase(BaseModel):
@@ -64,6 +65,8 @@ class UserBase(BaseModel):
     username: str = Field(max_length=50)
     email: str = Field(max_length=50)
 
+    model_config = ConfigDict(from_attributes=True)
+
 
 class UserCreate(UserBase):
     password: str = Field(max_length=8)
@@ -113,3 +116,9 @@ class EmailSchema(BaseModel):
 
 class RequestEmail(BaseModel):
     email: EmailStr
+
+# RESET PASSWORD
+    
+class ResetPasswordSchema(BaseModel):
+    token: str
+    password: str

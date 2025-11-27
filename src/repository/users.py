@@ -27,6 +27,13 @@ class UsersRepository:
         result = await self.db.execute(stmt)
         return result.scalar_one_or_none()
 
+    async def reset_password(self, email: str, password: str):
+        user = await self.get_user_by_email(email)
+        user.hashed_password = password
+        await self.db.commit()
+        await self.db.refresh(user)
+        return user
+
     async def create_user(
         self, body: UserCreate, password: str, avatar: str
     ) -> User | None:
@@ -47,11 +54,10 @@ class UsersRepository:
         user = await self.get_user_by_email(email)
         user.confirmed = True
         await self.db.commit()
-    
+
     async def update_avatar_url(self, email: str, url: str) -> User:
         user = await self.get_user_by_email(email)
         user.avatar = url
         await self.db.commit()
         await self.db.refresh(user)
         return user
-

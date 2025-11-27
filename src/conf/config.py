@@ -22,6 +22,10 @@ class Settings(BaseSettings):
     CLD_NAME: str ="name"
     CLD_API_KEY: int = 326488457974591
     CLD_API_SECRET: str = "secret"
+
+    REDIS_HOST:str
+
+    REDIS_PASSWORD:str
     model_config = ConfigDict(
         extra="ignore", env_file=".env", env_file_encoding="utf-8", case_sensitive=True
     )

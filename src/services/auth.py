@@ -6,14 +6,12 @@ from sqlalchemy import select, and_
 from jose import jwt, JWTError
 from sqlalchemy.ext.asyncio import AsyncSession
 from fastapi.security import OAuth2PasswordBearer
-from fastapi import BackgroundTasks
-from fastapi_mail import FastMail, MessageSchema, MessageType
 
 from src.repository.users import UsersRepository
 from src.database.db import get_db
 from src.database.models import User
 from src.conf.config import settings
-from src.schemas import EmailSchema
+from src.database.models import UserRole
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
 secret_key = settings.JWT_SECRET
@@ -40,6 +38,11 @@ async def get_current_user(
 
     return user
 
+
+def get_current_admin_user(current_user: User = Depends(get_current_user)):
+    if current_user.user_role != UserRole.ADMIN:
+        raise HTTPException(status_code=403, detail="No access rights")
+    return current_user
 
 def create_email_token(data: dict):
     to_encode = data.copy()
