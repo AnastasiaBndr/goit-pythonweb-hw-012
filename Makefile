@@ -22,3 +22,6 @@ head:
 
 dev:
 	fastapi dev main.py
+
+test:
+	pytest tests/
