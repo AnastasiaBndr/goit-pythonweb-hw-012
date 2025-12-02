@@ -1,9 +1,13 @@
-from pathlib import Path
+"""
+Email sending utility using FastAPI-Mail.
 
+Handles sending verification and password reset emails with templating support.
+"""
+
+from pathlib import Path
 from fastapi_mail import FastMail, MessageSchema, ConnectionConfig, MessageType
 from fastapi_mail.errors import ConnectionErrors
 from pydantic import EmailStr
-
 from src.services.auth import create_email_token
 from src.conf.config import settings
 
@@ -22,7 +26,28 @@ conf = ConnectionConfig(
 )
 
 
-async def send_email(email: EmailStr, username: str, host: str,template_name:str,subject:str):
+async def send_email(email: EmailStr, username: str, host: str, template_name: str, subject: str):
+    """
+    Send an email to the specified recipient using a template.
+
+    Parameters
+    ----------
+    email : EmailStr
+        Recipient email address.
+    username : str
+        Recipient's username for template personalization.
+    host : str
+        Base URL used in email templates.
+    template_name : str
+        Name of the template file.
+    subject : str
+        Email subject line.
+
+    Raises
+    ------
+    ConnectionErrors
+        If sending the email fails due to connection issues.
+    """
     try:
         token_verification = create_email_token({"sub": email})
         message = MessageSchema(

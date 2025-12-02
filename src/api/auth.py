@@ -1,3 +1,22 @@
+"""
+Authentication and authorization API endpoints.
+
+This module contains all authentication-related routes, including:
+
+* User registration
+* Login and token generation
+* Refreshing JWT tokens
+* Email confirmation
+* Password reset logic
+
+It integrates with:
+
+* ``UserService`` – user management logic
+* ``AuthService`` – JWT token generation & validation
+* ``send_email`` – background email delivery
+* ``Hash`` – password hashing/verification
+"""
+
 from fastapi import (
     APIRouter,
     HTTPException,
@@ -15,7 +34,7 @@ from src.schemas import (
     TokenRefreshRequest,
     ResetPasswordSchema,
     RequestEmail,
-    UserResponse
+    UserResponse,
 )
 from src.database.db import get_db
 from src.services.users import UserService
@@ -29,13 +48,40 @@ hash_handler = Hash()
 auth_service = AuthService()
 
 
-@router.post("/register")
+@router.post("/register", status_code=201)
 async def register(
     body: UserCreate,
     background_tasks: BackgroundTasks,
     request: Request,
     db: AsyncSession = Depends(get_db),
 ):
+    """
+    Register a new user account.
+
+    This endpoint creates a new user and sends a confirmation email
+    in the background.
+
+    Parameters
+    ----------
+    body : UserCreate
+        User registration data.
+    background_tasks : BackgroundTasks
+        Background task manager for sending emails.
+    request : Request
+        Current request object.
+    db : AsyncSession
+        Database session (dependency).
+
+    Raises
+    ------
+    HTTPException
+        If a user with the given username or email already exists.
+
+    Returns
+    -------
+    dict
+        Basic information about the newly created user.
+    """
     user_service = UserService(db)
 
     if await user_service.get_user_by_email(body.email):
@@ -44,14 +90,16 @@ async def register(
         raise HTTPException(status_code=409, detail="Account already exists")
 
     new_user = await user_service.register_user(body)
+
     background_tasks.add_task(
         send_email,
         new_user.email,
         new_user.username,
         request.base_url,
         template_name="verify_email.html",
-        subject="Confirm your email"
+        subject="Confirm your email",
     )
+
     return {
         "email": new_user.email,
         "username": new_user.username,
@@ -62,8 +110,29 @@ async def register(
 @router.post("/login")
 async def login(
     form: OAuth2PasswordRequestForm = Depends(),
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
+    """
+    Authenticate a user and return access/refresh tokens.
+
+    Parameters
+    ----------
+    form : OAuth2PasswordRequestForm
+        Login credentials (username + password).
+    db : AsyncSession
+        Database session.
+
+    Raises
+    ------
+    HTTPException
+        If username doesn't exist, password is invalid,
+        or the email is not confirmed.
+
+    Returns
+    -------
+    dict
+        Access token, refresh token, and token type.
+    """
     user_service = UserService(db)
     user = await user_service.get_user_by_username(form.username)
 
@@ -79,6 +148,7 @@ async def login(
 
     access_token = await auth_service.create_access_token({"sub": user.username})
     refresh_token = await auth_service.create_refresh_token({"sub": user.username})
+
     user.refresh_token = refresh_token
     await db.commit()
 
@@ -91,12 +161,35 @@ async def login(
 
 @router.post("/refresh-token", response_model=TokenModel)
 async def new_token(request: TokenRefreshRequest, db: AsyncSession = Depends(get_db)):
+    """
+    Generate a new access token using a valid refresh token.
+
+    Parameters
+    ----------
+    request : TokenRefreshRequest
+        Refresh token payload.
+    db : AsyncSession
+        Database session.
+
+    Raises
+    ------
+    HTTPException
+        If the refresh token is invalid or expired.
+
+    Returns
+    -------
+    dict
+        New access token and original refresh token.
+    """
     user = await auth_service.verify_refresh_token(request.refresh_token, db)
     if user is None:
         raise HTTPException(
-            status_code=401, detail="Invalid or expired refresh token")
+            status_code=401,
+            detail="Invalid or expired refresh token",
+        )
 
     new_access_token = await auth_service.create_access_token({"sub": user.username})
+
     return {
         "access_token": new_access_token,
         "refresh_token": request.refresh_token,
@@ -111,6 +204,28 @@ async def request_email(
     request: Request,
     db: AsyncSession = Depends(get_db),
 ):
+    """
+    Send an email confirmation link to the user.
+
+    If the email exists and is not confirmed, a verification email is sent.
+    Otherwise, a generic message is returned (to avoid email enumeration).
+
+    Parameters
+    ----------
+    body : RequestEmail
+        Email address container.
+    background_tasks : BackgroundTasks
+        Background task manager.
+    request : Request
+        Current request context.
+    db : AsyncSession
+        Database session.
+
+    Returns
+    -------
+    dict
+        Status message.
+    """
     user_service = UserService(db)
     user = await user_service.get_user_by_email(body.email)
 
@@ -126,13 +241,33 @@ async def request_email(
         user.username,
         request.base_url,
         template_name="verify_email.html",
-        subject="Confirm your email"
+        subject="Confirm your email",
     )
     return {"message": "If this email exists, a confirmation link has been sent."}
 
 
 @router.get("/confirmed_email/{token}")
 async def confirmed_email(token: str, db: AsyncSession = Depends(get_db)):
+    """
+    Confirm a user's email using a verification token.
+
+    Parameters
+    ----------
+    token : str
+        Email verification token.
+    db : AsyncSession
+        Database session.
+
+    Raises
+    ------
+    HTTPException
+        If the token is invalid or the user is already confirmed.
+
+    Returns
+    -------
+    dict
+        Confirmation message.
+    """
     email = await auth_service.get_email_from_token(token)
     user_service = UserService(db)
     user = await user_service.get_user_by_email(email)
@@ -141,7 +276,9 @@ async def confirmed_email(token: str, db: AsyncSession = Depends(get_db)):
         raise HTTPException(status_code=400, detail="Verification error")
     if user.confirmed:
         raise HTTPException(
-            status_code=400, detail="Your email has already been confirmed")
+            status_code=400,
+            detail="Your email has already been confirmed",
+        )
 
     await user_service.confirmed_email(email)
     return {"message": "Email confirmed!"}
@@ -152,8 +289,30 @@ async def request_password_reset(
     body: RequestEmail,
     background_tasks: BackgroundTasks,
     request: Request,
-    db: AsyncSession = Depends(get_db)
+    db: AsyncSession = Depends(get_db),
 ):
+    """
+    Request a password reset email.
+
+    The endpoint always returns a generic message to avoid disclosing
+    whether an email exists in the system.
+
+    Parameters
+    ----------
+    body : RequestEmail
+        Email for password reset.
+    background_tasks : BackgroundTasks
+        Background task manager.
+    request : Request
+        Current request object.
+    db : AsyncSession
+        Database session.
+
+    Returns
+    -------
+    dict
+        Status message.
+    """
     user_service = UserService(db)
     user = await user_service.get_user_by_email(body.email)
 
@@ -164,7 +323,7 @@ async def request_password_reset(
             user.username,
             request.base_url,
             template_name="reset_password.html",
-            subject="Reset password"
+            subject="Reset password",
         )
 
     return {"message": "If this email exists, a reset link has been sent."}
@@ -172,12 +331,33 @@ async def request_password_reset(
 
 @router.post("/reset_password")
 async def reset_password(data: ResetPasswordSchema, db: AsyncSession = Depends(get_db)):
+    """
+    Reset the user's password using a valid token.
+
+    Parameters
+    ----------
+    data : ResetPasswordSchema
+        Token + new password payload.
+    db : AsyncSession
+        Database session.
+
+    Raises
+    ------
+    HTTPException
+        If the token is invalid or user does not exist.
+
+    Returns
+    -------
+    dict
+        Success message.
+    """
     email = await auth_service.get_email_from_token(data.token)
     if email is None:
         raise HTTPException(status_code=400, detail="Verification error")
 
     user_service = UserService(db)
     user = await user_service.get_user_by_email(email)
+
     if user is None:
         raise HTTPException(status_code=400, detail="Verification error")
 
