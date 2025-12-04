@@ -1,97 +1,100 @@
-from src.repository import contacts
+from unittest.mock import patch, Mock
+from datetime import date
+from src.repository.contacts import ContactRepository
+from src.database.models import User, Contact
+from src.schemas import ContactModel
+from tests.conftest import TestingSessionLocal
+import pytest
 
-class TestContactRepository:
-    def test_start(self):
-        assert True
-    # def __init__(self, session: AsyncSession):
-    #     self.db = session
 
-    # async def get_contacts(self, skip: int, limit: int, user: User) -> List[Contact]:
-    #     query = select(Contact).filter_by(user=user).offset(skip).limit(limit)
-    #     tags = await self.db.execute(query)
-    #     return tags.scalars().all()
+contact2 = ContactModel(
+    first_name="John",
+    second_name="Doe",
+    email="john@example.com",
+    phone_number="+380501234567",
+    birthday=date(2000, 1, 1),
+)
 
-    # async def get_contact_by_id(self, contact_id: int, user: User) -> Contact | None:
-    #     query = select(Contact).filter_by(id=contact_id, user=user)
-    #     tag = await self.db.execute(query)
-    #     return tag.scalar_one_or_none()
+contact_update = ContactModel(
+    first_name="John2",
+    second_name="Doe",
+    email="john@example.com",
+    phone_number="+380501234567",
+    birthday=date(2000, 1, 1),
+)
 
-    # async def create_contact(self, body: ContactModel, user: User) -> Contact:
-    #     data = body.model_dump(exclude_unset=True)
 
-    #     if isinstance(data.get("birthday"), str):
-    #         data["birthday"] = datetime.strptime(data["birthday"], "%Y-%m-%d").date()
+@pytest.mark.asyncio
+async def test_get_contacts(init_models_wrap):
+    async with TestingSessionLocal() as session:
+        user = await session.get(User, 1)
+        contact1 = Contact(
+            first_name="John",
+            second_name="Doe",
+            email="john@example.com",
+            phone_number="+380501234567",
+            birthday=date.today(),
+            user_id=user.id
+        )
+        session.add_all([contact1, contact1])
+        await session.commit()
 
-    #     contact = Contact(**data, user=user)
-    #     self.db.add(contact)
-    #     await self.db.commit()
-    #     await self.db.refresh(contact)
-    #     return contact
+        repo = ContactRepository(session)
+        result = await repo.get_contacts(skip=0, limit=10, user=user)
+        assert len(result) == 1
+        assert result[0].first_name == contact1.first_name
 
-    # async def update_contact(
-    #     self, contact_id: int, body: ContactModel, user: User
-    # ) -> Contact | None:
-    #     contact = await self.get_contact_by_id(contact_id, user)
-    #     if contact:
-    #         contact.phone_number = body.phone_number
-    #         contact.second_name = body.second_name
-    #         contact.first_name = body.first_name
-    #         contact.additional_data = body.additional_data
-    #         contact.email = body.email
-    #         contact.birthday = body.birthday
 
-    #         await self.db.commit()
-    #         await self.db.refresh(contact)
-    #     return contact
+@pytest.mark.asyncio
+async def test_get_contact_by_id(init_models_wrap):
+    async with TestingSessionLocal() as session:
+        user = await session.get(User, 1)
 
-    # async def remove_contact(self, contact_id: int, user: User) -> Contact | None:
-    #     contact = await self.get_contact_by_id(contact_id, user)
-    #     if contact:
-    #         await self.db.delete(contact)
-    #         await self.db.commit()
-    #     return contact
+        repo = ContactRepository(session)
+        result = await repo.get_contact_by_id(contact_id=1, user=user)
+        assert result.first_name == "John"
 
-    # async def search_contacts(
-    #     self,
-    #     first_name: str = None,
-    #     second_name: str = None,
-    #     email: str = None,
-    #     user: User = None,
-    # ) -> Contact | None:
-    #     query = select(Contact).filter_by(user=user)
 
-    #     if first_name or second_name or email:
-    #         filters = []
-    #         if first_name:
-    #             filters.append(Contact.first_name.ilike(f"%{first_name}%"))
-    #         if second_name:
-    #             filters.append(Contact.second_name.ilike(f"%{second_name}%"))
-    #         if email:
-    #             filters.append(Contact.email.ilike(f"%{email}%"))
+@pytest.mark.asyncio
+async def test_create_contact(init_models_wrap):
+    async with TestingSessionLocal() as session:
+        user = await session.get(User, 1)
+        
 
-    #         query = query.filter(or_(*filters))
+        repo = ContactRepository(session)
+        created = await repo.create_contact(body=contact2, user=user)
+        result = await repo.get_contacts(skip=0, limit=10, user=user)
+        assert created.first_name == contact2.first_name
+        assert result[1].first_name == contact2.first_name
 
-    #     result = await self.db.execute(query)
-    #     return result.scalars().all()
 
-    # async def get_upcoming_birthdays(self, user: User):
-    #     today = date.today()
+@pytest.mark.asyncio
+async def test_update_contact(init_models_wrap):
+    async with TestingSessionLocal() as session:
+        user = await session.get(User, 1)
+        
 
-    #     result = await self.db.execute(select(Contact).filter_by(user=user))
-    #     contacts = result.scalars().all()
+        repo = ContactRepository(session)
+        updated = await repo.update_contact(contact_id=1, body=contact_update, user=user)
+        assert updated.first_name == contact_update.first_name
 
-    #     upcoming = []
-    #     for c in contacts:
-    #         if not c.birthday:
-    #             continue
 
-    #         birthday_this_year = c.birthday.replace(year=today.year)
+@pytest.mark.asyncio
+async def test_remove_contact(init_models_wrap):
+    async with TestingSessionLocal() as session:
+        user = await session.get(User, 1)
 
-    #         if birthday_this_year < today:
-    #             birthday_this_year = c.birthday.replace(year=today.year + 1)
-    #         delta = (birthday_this_year - today).days
+        repo = ContactRepository(session)
+        removed = await repo.remove_contact(contact_id=1, user=user)
+        assert removed.first_name == contact_update.first_name
 
-    #         if 0 <= delta <= 7:
-    #             upcoming.append(c)
 
-    #     return upcoming
+@pytest.mark.asyncio
+async def test_search_contact(init_models_wrap):
+    async with TestingSessionLocal() as session:
+        user = await session.get(User, 1)
+
+        repo = ContactRepository(session)
+        found = await repo.search_contacts(first_name="John", user=user)
+        assert len(found)>0
+        assert found[0].first_name == "John"

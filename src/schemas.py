@@ -64,6 +64,7 @@ class ContactUpdate(BaseModel):
 class UserBase(BaseModel):
     username: str = Field(max_length=50)
     email: str = Field(max_length=50)
+    
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -91,6 +92,7 @@ class UserModel(UserBase):
 
 class UserResponse(UserBase):
     id: int = Field(ge=1)
+    avatar: str = Field(max_length=255)
     model_config = ConfigDict(from_attributes=True)
 
 

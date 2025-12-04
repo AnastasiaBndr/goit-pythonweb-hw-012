@@ -5,12 +5,14 @@ import pytest_asyncio
 from fastapi.testclient import TestClient
 from sqlalchemy.pool import StaticPool
 from sqlalchemy.ext.asyncio import create_async_engine, async_sessionmaker, AsyncSession
+from unittest.mock import patch, MagicMock
 
 from main import app
 from src.database.models import Base, User
 from src.database.db import get_db
 from src.services.auth import AuthService
 from src.security.hashing import Hash
+from src.schemas import UserRole
 
 auth_service = AuthService()
 SQLALCHEMY_DATABASE_URL = "sqlite+aiosqlite:///./test.db"
@@ -48,6 +50,7 @@ def init_models_wrap():
                 hashed_password=hash_password,
                 confirmed=True,
                 avatar="https://twitter.com/gravatar",
+                user_role=UserRole.ADMIN,
             )
             session.add(user)
             await session.commit()
@@ -55,6 +58,18 @@ def init_models_wrap():
     asyncio.run(init_models())
 
 
+@pytest_asyncio.fixture
+async def db_session():
+    async with TestingSessionLocal() as session:
+        try:
+            yield session
+        finally:
+            await session.rollback()
+
+@pytest_asyncio.fixture()
+async def get_token():
+    token = await auth_service.create_access_token(data={"sub": test_user["username"]})
+    return token
 
 @pytest.fixture(scope="module")
 def client():
@@ -72,7 +87,18 @@ def client():
     yield TestClient(app)
 
 
-@pytest_asyncio.fixture()
-async def get_token():
-    token = await auth_service.create_access_token(data={"sub": test_user["username"]})
-    return token
+
+
+@pytest.fixture(autouse=True)
+def mock_redis():
+    fake_r = MagicMock()
+    fake_r.get.return_value = None
+    fake_r.setex.return_value = True
+    with patch("src.api.users.r", fake_r):
+        yield fake_r
+
+
+@pytest.fixture(autouse=True)
+def disable_limiter():
+    with patch("src.api.users.limiter.limit", lambda *args, **kwargs: lambda f: f):
+        yield

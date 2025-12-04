@@ -27,4 +27,4 @@ test:
 	pytest tests/
 
 coverage:
-	coverage run -m pytest tests/
+	pytest --cov=src tests/

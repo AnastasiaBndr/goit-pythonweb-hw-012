@@ -65,6 +65,9 @@ class User(Base):
         Enum(UserRole, name="user_role"), default=UserRole.USER, nullable=False
     )
 
+    contacts: Mapped[list["Contact"]] = relationship(
+        "Contact", back_populates="user")
+
     def __str__(self) -> str:
         return f"User: {self.username}"
 
@@ -102,3 +105,8 @@ class Contact(Base):
     email: Mapped[str] = mapped_column(String(100), nullable=False)
     phone_number: Mapped[str] = mapped_column(String(13), nullable=False)
     birthday: Mapped[date] = mapped_column(Date)
+    additional_data: Mapped[str] = mapped_column(String(100), nullable=True)
+
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id"), nullable=False)
+    user: Mapped["User"] = relationship("User", back_populates="contacts")
