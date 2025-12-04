@@ -67,11 +67,11 @@ class Settings(BaseSettings):
         Redis server password.
     """
 
-    POSTGRES_DB:str
-    POSTGRES_PASSWORD:str
-    POSTGRES_USER:str
-    POSTGRES_PORT:int
-    POSTGRES_HOST:str
+    POSTGRES_DB: str
+    POSTGRES_PASSWORD: str
+    POSTGRES_USER: str
+    POSTGRES_PORT: int
+    POSTGRES_HOST: str
     JWT_SECRET: str
     JWT_ALGORITHM: str = "HS256"
     REFRESH_TOKEN_EXPIRE_MINUTES: int = 30
@@ -95,6 +95,7 @@ class Settings(BaseSettings):
     REDIS_HOST: str
     REDIS_PASSWORD: str
 
+    @property
     def DB_URL(self) -> str:
         return (
             f"postgresql+asyncpg://{self.POSTGRES_USER}:{self.POSTGRES_PASSWORD}"
