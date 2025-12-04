@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from slowapi.errors import RateLimitExceeded
 from src.api import utils, contacts, users, auth
 
-app = FastAPI(title="My API")
+app = FastAPI(title="My API", root_path="/goithomework12")
 
 
 origins = ["http://localhost:3000"]
@@ -15,7 +15,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
 
 
 @app.exception_handler(RateLimitExceeded)
@@ -31,7 +30,6 @@ app.include_router(utils.router, prefix="/api")
 app.include_router(auth.router, prefix="/api")
 app.include_router(contacts.router, prefix="/api")
 app.include_router(users.router, prefix="/api")
-
 
 
 @app.get("/health")
