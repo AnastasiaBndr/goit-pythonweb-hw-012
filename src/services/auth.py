@@ -33,7 +33,7 @@ from src.database.models import User
 from src.conf.config import settings
 from src.database.models import UserRole
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/auth/login")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/goithomework12/api/auth/login")
 secret_key = settings.JWT_SECRET
 algorithm = settings.JWT_ALGORITHM
 access_expire = settings.ACCESS_TOKEN_EXPIRE_MINUTES
