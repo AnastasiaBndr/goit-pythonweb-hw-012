@@ -45,3 +45,7 @@ pythonpath = ["."]
 dev = [
     "sphinx (>=8.2.3,<9.0.0)"
 ]
+
+[tool.poetry]
+package-mode = false
+
