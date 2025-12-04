@@ -46,6 +46,11 @@ dev = [
     "sphinx (>=8.2.3,<9.0.0)"
 ]
 
+[virtualenvs]
+in-project = true
+
+[installer]
+allow-root = true
+
 [tool.poetry]
 package-mode = false
-
