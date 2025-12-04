@@ -28,6 +28,7 @@ from fastapi import APIRouter, Depends, Request, UploadFile, File
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 from sqlalchemy.ext.asyncio import AsyncSession
+import time
 
 from src.database.db import get_db
 from src.schemas import UserResponse
@@ -40,13 +41,16 @@ from src.conf.config import settings
 router = APIRouter(prefix="/users", tags=["users"])
 limiter = Limiter(key_func=get_remote_address)
 
-r = redis.Redis(
-    host=settings.REDIS_HOST,
-    port=6379,
-    password=settings.REDIS_PASSWORD,
-    db=0,
-)
+# r = redis.Redis(
+#     host=settings.REDIS_HOST,
+#     port=6379,
+#     password=settings.REDIS_PASSWORD,
+#     db=0,
+# )
 
+cache = {}
+
+CACHE_EXPIRATION = 60
 
 @router.get(
     "/me",
@@ -74,14 +78,28 @@ async def me(request: Request, user: User = Depends(get_current_user)):
     UserResponse
         User profile data loaded from cache or database.
     """
-    cached_user = r.get(str(f"user:{user.id}"))
-    if cached_user:
-        return json.loads(cached_user)
+    # cached_user = r.get(str(f"user:{user.id}"))
+    # if cached_user:
+    #     return json.loads(cached_user)
 
+    # user_response = UserResponse.model_validate(user)
+    # user_data = user_response.model_dump()
+
+    # r.setex(f"user:{user.id}", 60, json.dumps(user_data))
+
+    # return user_data
+    cached_entry = cache.get(user.id)
+    if cached_entry:
+        data, timestamp = cached_entry
+        if time.time() - timestamp < CACHE_EXPIRATION:
+            return data  # повертаємо кешовані дані
+
+    # Якщо немає або прострочено — беремо з бази
     user_response = UserResponse.model_validate(user)
     user_data = user_response.model_dump()
 
-    r.setex(f"user:{user.id}", 60, json.dumps(user_data))
+    # Кешуємо результат
+    cache[user.id] = (user_data, time.time())
 
     return user_data
 
