@@ -4,7 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from slowapi.errors import RateLimitExceeded
 from src.api import utils, contacts, users, auth
 
-app = FastAPI(title="My API", root_path="/goithomework12")
+app = FastAPI(title="My API", root_path="/goithomework12",docs_url="/api/docs",)
 
 
 origins = ["http://localhost:3000"]
